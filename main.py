@@ -8,10 +8,38 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import requests
 from urllib.parse import urlparse
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ✅ Database Configuration
-DATABASE_URL = "postgresql://dicomuser:123@localhost:5432/dicomdb"
-engine = create_engine(DATABASE_URL)
+# Use the Render PostgreSQL external URL
+DATABASE_URL = "postgresql://database_h9fh_user:uVn8TArSohaWM2EMyqO0uNngONOuaF4n@dpg-cv9jigtumphs73a86lfg-a.oregon-postgres.render.com/database_h9fh"
+
+# Fix the URL for SQLAlchemy (replace 'postgres://' with 'postgresql://')
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+logger.info(f"Database URL: {DATABASE_URL}")
+
+# Create the SQLAlchemy engine
+try:
+    engine = create_engine(DATABASE_URL)
+    logger.info("✅ Engine created successfully!")
+except Exception as e:
+    logger.error(f"❌ Failed to create engine: {e}")
+    raise
+
+# Test the database connection
+try:
+    with engine.connect() as connection:
+        logger.info("✅ Successfully connected to the database!")
+except Exception as e:
+    logger.error(f"❌ Failed to connect to the database: {e}")
+    raise
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -39,7 +67,12 @@ class DicomFile(Base):
     file_path = Column(String)
 
 # ✅ Create tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("✅ Tables created successfully!")
+except Exception as e:
+    logger.error(f"❌ Error creating tables: {e}")
+    raise
 
 # ✅ FastAPI App
 app = FastAPI()
@@ -47,6 +80,7 @@ app = FastAPI()
 # ✅ Create Upload Directory
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+logger.info(f"Upload directory: {UPLOAD_DIR}")
 
 # ✅ Function to validate DICOM file
 def is_valid_dicom(file_path: str) -> bool:
@@ -54,7 +88,7 @@ def is_valid_dicom(file_path: str) -> bool:
         pydicom.dcmread(file_path)
         return True
     except Exception as e:
-        print(f"❌ Invalid DICOM file: {e}")
+        logger.error(f"❌ Invalid DICOM file: {e}")
         return False
 
 # ✅ Function to parse and store DICOM file
@@ -126,9 +160,10 @@ def parse_and_store_dicom(file_path: str):
         db.add(dicom_entry)
         db.commit()
         db.close()
+        logger.info(f"✅ Metadata stored for file: {os.path.basename(file_path)}")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        logger.error(f"❌ Error parsing and storing DICOM file: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 # ✅ Function to reset ID sequence
@@ -142,10 +177,10 @@ def reset_id_sequence():
         # Reset the ID sequence to 1
         db.execute(text("ALTER SEQUENCE dicom_files_id_seq RESTART WITH 1"))
         db.commit()
-        print("✅ ID sequence reset to 1")
+        logger.info("✅ ID sequence reset to 1")
     except Exception as e:
         db.rollback()
-        print(f"❌ Error resetting ID sequence: {e}")
+        logger.error(f"❌ Error resetting ID sequence: {e}")
     finally:
         db.close()
 
@@ -204,7 +239,7 @@ async def upload_dicom_from_url(url: str):
             content={"filename": filename, "message": "File uploaded and metadata stored successfully"}
         )
     except Exception as e:
-        print(f"❌ Error: {e}")
+        logger.error(f"❌ Error uploading DICOM file from URL: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ✅ Endpoint 3: Get metadata by filename
