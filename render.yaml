@@ -1,0 +1,10 @@
+services:
+  - name: fastapi-dicom
+    type: web
+    runtime: docker
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://dicomuser:123@localhost:5432/dicomdb
+    healthCheckPath: /
+    region: oregon
