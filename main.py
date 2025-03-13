@@ -243,6 +243,7 @@ async def upload_dicom_from_url(url: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ✅ Endpoint 3: Get metadata by filename
+# ✅ Endpoint 3: Get metadata by filename
 @app.get("/metadata/{filename}")
 def get_metadata(filename: str):
     db = SessionLocal()
@@ -252,15 +253,26 @@ def get_metadata(filename: str):
     if not file_data:
         raise HTTPException(status_code=404, detail="File not found")
 
+    # Return all metadata fields
     return {
         "filename": file_data.filename,
         "patient_id": file_data.patient_id,
         "patient_name": file_data.patient_name,
+        "patient_birth_date": file_data.patient_birth_date,
+        "patient_sex": file_data.patient_sex,
+        "patient_age": file_data.patient_age,
+        "patient_weight": file_data.patient_weight,
+        "patient_address": file_data.patient_address,
         "study_date": file_data.study_date,
-        "modality": file_data.study_modality,
+        "study_time": file_data.study_time,
+        "study_id": file_data.study_id,
+        "study_modality": file_data.study_modality,
+        "study_description": file_data.study_description,
+        "series_date": file_data.series_date,
+        "series_time": file_data.series_time,
+        "series_description": file_data.series_description,
+        "file_path": file_data.file_path
     }
-
-# ✅ Endpoint 4: List all uploaded DICOM files
 @app.get("/files/")
 def list_files():
     db = SessionLocal()
