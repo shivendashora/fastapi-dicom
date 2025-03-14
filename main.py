@@ -9,6 +9,8 @@ from datetime import datetime
 import requests
 from urllib.parse import urlparse
 import logging
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +79,14 @@ except Exception as e:
 # ✅ FastAPI App
 app = FastAPI()
 
+# ✅ Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],  
+)
 # ✅ Create Upload Directory
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -290,7 +300,7 @@ def list_files():
         for file in files
     ]
 
-# ✅ Endpoint 5: Delete all records and reset ID sequence
+# ✅ Endpoint 5: Delete all records and reset ID sequences
 @app.delete("/delete-all/")
 def delete_all_records():
     reset_id_sequence()
